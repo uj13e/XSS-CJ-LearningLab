@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>プロフィール - 掲示板</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="nav-inner">
+    <span class="nav-brand">📋 掲示板</span>
+    <a href="{{ url_for('board') }}">掲示板</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('profile') }}">プロフィール</a>
+    {% if role in ('admin', 'staff') %}
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('admin_panel') }}">管理パネル</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('settings') }}">対策設定</a>
+    {% endif %}
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('reset') }}">リセット</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('login') }}">ログアウト</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+  <h1 class="page-title">👤 プロフィール</h1>
+
+  {% if is_deleted %}
+  <!-- 削除済みバナー -->
+  <div class="card danger" style="text-align:center;padding:28px">
+    <div style="font-size:2rem;margin-bottom:10px">⚠</div>
+    <div class="card-title" style="justify-content:center;font-size:1.1rem;color:var(--danger)">
+      このアカウントは削除されました
+    </div>
+    <p>クリックジャッキング攻撃によりアカウントが削除されました。</p>
+    <a href="{{ url_for('reset') }}" class="btn btn-danger btn-sm">リセットして復元する</a>
+  </div>
+
+  {% else %}
+
+  <!-- アカウント情報 -->
+  <div class="card">
+    <div class="card-title">アカウント情報</div>
+    <dl class="info-grid">
+      <dt>ユーザー名</dt>
+      <dd>{{ username }}</dd>
+      <dt>ロール</dt>
+      <dd><span class="badge {{ role }}">{{ role }}</span></dd>
+      <dt>セッショントークン</dt>
+      <dd><code style="font-size:.78rem;word-break:break-all">{{ token }}</code></dd>
+    </dl>
+  </div>
+
+  <!-- 危険ゾーン -->
+  <div class="card danger">
+    <div class="card-title" style="color:var(--danger)">
+      ⚠ 危険ゾーン
+    </div>
+    <p>アカウントを削除します。削除後はログインできなくなります。</p>
+    <p>（リセットで全アカウントを復元できます）</p>
+    <form method="post" action="{{ url_for('profile_delete') }}">
+      <button type="submit" class="btn btn-danger">アカウントを削除する</button>
+    </form>
+  </div>
+
+  {% endif %}
+
+  <p class="legend-text">
+    このページはクリックジャッキング攻撃のデモターゲットです。<br>
+    X-Frame-Options が ON のとき、iframe への埋め込みがブロックされ攻撃が無効化されます。
+  </p>
+</div>
+
+</body>
+</html>

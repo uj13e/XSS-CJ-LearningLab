@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>CJ攻撃 コントロールパネル - XSS / CJ Demo</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body class="atk">
+
+<nav class="site-nav">
+  <div class="nav-inner">
+    <span class="nav-brand">⚠ XSS / CJ Demo</span>
+    <a href="{{ url_for('attacker_dashboard') }}">攻撃者ダッシュボード</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('attacker_cj') }}">CJ攻撃Demo</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('reset') }}">リセット</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+  <h1 class="page-title">🎭 クリックジャッキング 攻撃デモ</h1>
+  <p class="page-sub">攻撃者の偽ページ上に、被害者サイト（プロフィール）の iframe を透明に重ねてクリックを盗む</p>
+
+  <!-- 攻撃ステージを開くボタン -->
+  <div class="atk-card" style="margin-bottom:18px">
+    <h2>🖥 攻撃ステージ</h2>
+    <p style="font-size:.83rem;color:var(--atk-muted);margin-bottom:12px">
+      ① 同じブラウザで確認する場合: 「攻撃ステージを開く」で別ウィンドウを開き、スライダーで位置を調整します。<br>
+      ② 別ブラウザ（EdgeとChromeなど）でデモする場合: スライダーで位置を調整 → 「被害者用URLをコピー」→ 別ブラウザで貼り付け。
+    </p>
+    <div class="atk-btn-row">
+      <button class="atk-btn red" onclick="openStage()">⚔ 攻撃ステージを開く</button>
+      <button class="atk-btn green" onclick="confirmPosition()">✅ 位置を確定する</button>
+    </div>
+    <div class="atk-status warn" id="status-box" style="margin-top:14px">
+      ⚠ ステルスモード: 被害者にはデコイだけが見えています。「当選を確認する」クリック → 実際には削除ボタンが押されます。
+    </div>
+  </div>
+
+  <!-- 被害者用URLコピー (クロスブラウザ対応) -->
+  <div class="atk-card" style="margin-bottom:18px">
+    <h2>🔗 被害者用URL（クロスブラウザ対応）</h2>
+    <p style="font-size:.83rem;color:var(--atk-muted);margin-bottom:10px">
+      スライダーで位置を調整後、このURLをコピーして被害者に送る（または別ブラウザで開く）。<br>
+      URLにX/Yオフセットが埋め込まれているため、別ブラウザで開いても位置が再現されます。
+    </p>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="text" id="victim-url" readonly
+             style="flex:1;font-size:.75rem;font-family:monospace;background:#0f172a;
+                    border:1px solid #334155;color:#7dd3fc;padding:7px 10px;
+                    border-radius:6px;margin:0;cursor:text">
+      <button class="atk-btn blue" id="copy-btn" onclick="copyVictimUrl()">📋 URLをコピー</button>
+    </div>
+  </div>
+
+  <!-- スライダー -->
+  <div class="atk-card">
+    <h2>🎛 iframe 位置・透明度調整</h2>
+
+    <!-- 透明度 -->
+    <div style="margin-bottom:16px">
+      <label class="atk-label">
+        iframe 透明度
+        <span class="atk-val" id="opacity-val">5%</span>
+      </label>
+      <input type="range" id="opacity-slider" min="1" max="100" value="5"
+             oninput="setOpacity(this.value)">
+      <div style="display:flex;justify-content:space-between;font-size:.72rem;color:var(--atk-muted);margin-top:2px">
+        <span>← ステルス (被害者に見えない)</span>
+        <span>(透けて見える) 半透明 →</span>
+      </div>
+    </div>
+
+    <!-- 縦位置 -->
+    <div style="margin-bottom:16px">
+      <label class="atk-label">
+        縦位置調整 (Y 軸 px)
+        <span class="atk-val" id="y-val">-220</span>
+      </label>
+      <input type="range" id="y-slider" min="-600" max="200" value="-220"
+             oninput="setY(this.value)">
+      <div style="font-size:.72rem;color:var(--atk-muted);margin-top:2px">
+        マイナス → iframe を上にずらす（削除ボタンをデコイボタンの位置に合わせる）
+      </div>
+    </div>
+
+    <!-- 横位置 -->
+    <div style="margin-bottom:16px">
+      <label class="atk-label">
+        横位置調整 (X 軸 px)
+        <span class="atk-val" id="x-val">0</span>
+      </label>
+      <input type="range" id="x-slider" min="-300" max="300" value="0"
+             oninput="setX(this.value)">
+      <div style="font-size:.72rem;color:var(--atk-muted);margin-top:2px">
+        マイナス → iframe を左に / プラス → 右にずらす
+      </div>
+    </div>
+
+    <!-- プリセット -->
+    <div>
+      <label class="atk-label">プリセット</label>
+      <div class="atk-btn-row">
+        <button class="atk-btn red"   onclick="applyPreset(5, 0, -220)">🔴 ステルス</button>
+        <button class="atk-btn amber" onclick="applyPreset(50, 0, -220)">🟡 半透明確認</button>
+        <button class="atk-btn blue"  onclick="applyPreset(5, 0, -220)">🔵 リセット</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 仕組み説明 -->
+  <div class="atk-card">
+    <h2>⚙ 攻撃の仕組み</h2>
+    <ol style="font-size:.83rem;color:var(--atk-muted);line-height:1.8;padding-left:18px;margin:0">
+      <li>攻撃者は自分のサイト（デコイ）に、<strong style="color:var(--atk-text)">被害者サイトを iframe で埋め込む</strong>（ほぼ透明）</li>
+      <li>iframe は <code>z-index</code> が高く設定されており、<strong style="color:var(--atk-text)">クリックは iframe が受け取る</strong></li>
+      <li>被害者には偽ページだけが見えており、「当選確認ボタン」をクリックしたつもりが…</li>
+      <li>実際には透明な iframe 内の<strong style="color:var(--atk-accent)">「アカウントを削除する」ボタンが押される</strong></li>
+      <li>対策: <code>X-Frame-Options: DENY</code> で iframe への埋め込み自体をブロック</li>
+    </ol>
+    <div class="atk-status info" style="margin-top:14px">
+      💡 <a href="{{ url_for('settings') }}" style="color:#7dd3fc">対策設定</a> で
+      <strong>X-Frame-Options</strong> を ON にすると iframe が読み込まれなくなり、攻撃が無効化されます。<br>
+      攻撃後は <a href="{{ url_for('profile') }}" style="color:#7dd3fc">プロフィールページ</a> でアカウントが削除されたか確認、
+      <a href="{{ url_for('reset') }}" style="color:#7dd3fc">リセット</a> で復元できます。
+    </div>
+  </div>
+
+  <p class="legend-text" style="border-top-color:#334155;color:var(--atk-muted)">
+    ※ 攻撃ステージウィンドウとはブラウザの <code>postMessage</code> API で通信しています。<br>
+    ※ 攻撃ステージを閉じた後は「攻撃ステージを開く」ボタンで再度開いてください。
+  </p>
+</div>
+
+<script src="{{ url_for('static', filename='cj.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,42 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+
+# === Virtual environments ===
+venv/
+env/
+.venv/
+ENV/
+
+# === TLS certificates ===
+# Generated locally by pemcreator.py and tied to the machine's IP address.
+# Never commit private keys.
+cert.pem
+key.pem
+*.pem
+*.key
+
+# === Runtime data ===
+# Created/overwritten automatically by app.py at runtime (board posts,
+# collected "loot", and the defense-toggle state). Regenerated on first run.
+messages.json
+loot.json
+settings.json
+
+# === OS / Editor ===
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# === Logs ===
+*.log

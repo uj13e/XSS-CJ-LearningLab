@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>管理パネル - 掲示板</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+<style>
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    text-align: center;
+    padding: 20px 12px;
+  }
+  .stat-num {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .stat-label {
+    font-size: .78rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .sessions-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .83rem;
+  }
+  .sessions-table th {
+    text-align: left;
+    padding: 7px 10px;
+    border-bottom: 1.5px solid var(--border);
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: .78rem;
+  }
+  .sessions-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid #f0f2f5;
+    vertical-align: middle;
+  }
+  .sessions-table tr:last-child td { border-bottom: none; }
+  .btn-sm {
+    padding: 5px 14px;
+    font-size: .82rem;
+  }
+  .bot-dot-on  { color: var(--success); font-weight: 700; }
+  .bot-dot-off { color: var(--text-muted); }
+  .settings-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .settings-chip {
+    font-size: .74rem;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-weight: 600;
+  }
+  .settings-chip.on  { background: #dcfce7; color: #166534; }
+  .settings-chip.off { background: #fee2e2; color: #991b1b; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="nav-inner">
+    <span class="nav-brand">📋 掲示板</span>
+    <a href="{{ url_for('board') }}">掲示板</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('profile') }}">プロフィール</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('admin_panel') }}">管理パネル</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('settings') }}">対策設定</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('reset') }}">リセット</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('login') }}">ログアウト</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+  <h1 class="page-title">⚙ 管理パネル</h1>
+  <p class="page-sub">システム状態の確認・Bot管理・セッション監視ができます。</p>
+
+  <!-- 統計 -->
+  <div class="stat-grid">
+    <div class="card stat-card">
+      <div class="stat-num">{{ sessions|length }}</div>
+      <div class="stat-label">アクティブセッション</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-num">{{ message_count }}</div>
+      <div class="stat-label">投稿数</div>
+    </div>
+    <div class="card stat-card">
+      <div class="stat-num" style="color:var(--danger)">{{ loot_count }}</div>
+      <div class="stat-label">窃取済み Cookie</div>
+    </div>
+  </div>
+
+  <!-- Bot管理 -->
+  <div class="card">
+    <div class="card-title">🤖 Bot 管理</div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      {% if not bot_running %}
+      <form method="post" action="{{ url_for('bot_start') }}" style="margin:0">
+        <button type="submit" class="btn btn-primary btn-sm">▶ Bot 会話を開始</button>
+      </form>
+      {% else %}
+      <form method="post" action="{{ url_for('bot_stop') }}" style="margin:0">
+        <button type="submit" class="btn btn-sm" style="border:1.5px solid var(--danger);color:var(--danger)">⏹ Bot を停止</button>
+      </form>
+      {% endif %}
+      <form method="post" action="{{ url_for('bot_reset') }}" style="margin:0">
+        <button type="submit" class="btn btn-sm" style="border:1.5px solid var(--border)">↺ Bot セッションをリセット</button>
+      </form>
+    </div>
+
+    <div style="margin-top:12px;font-size:.82rem">
+      {% if bot_running %}
+      <span class="bot-dot-on">● Bot 会話中</span>
+      <span style="color:var(--text-muted);margin-left:6px">{{ bot_names|join('・') }}</span>
+      {% else %}
+      <span class="bot-dot-off">○ Bot は停止中</span>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- アクティブセッション一覧 -->
+  <div class="card">
+    <div class="card-title">👥 アクティブセッション（{{ sessions|length }} 件）</div>
+    {% if sessions %}
+    <table class="sessions-table">
+      <thead>
+        <tr>
+          <th>ユーザー名</th>
+          <th>ロール</th>
+          <th>トークン（先頭 20 文字）</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sess in sessions %}
+        <tr>
+          <td>
+            {{ sess.username }}
+            {% if sess.is_bot %}
+            <span style="font-size:.72rem;color:var(--text-muted);margin-left:4px">[Bot]</span>
+            {% endif %}
+          </td>
+          <td><span class="badge {{ sess.role }}">{{ sess.role }}</span></td>
+          <td><code style="font-size:.76rem">{{ sess.token[:20] }}…</code></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:var(--text-muted);font-size:.85rem;margin:0">アクティブなセッションはありません。</p>
+    {% endif %}
+  </div>
+
+  <p class="legend-text">
+    ※ Bot の [Bot] ラベルはこの管理パネルのみに表示されます。掲示板では通常ユーザーと区別できません。<br>
+    ※ Bot のセッショントークンは <code>usr_</code> プレフィックスで発行されます（role: user）。
+  </p>
+</div>
+
+</body>
+</html>

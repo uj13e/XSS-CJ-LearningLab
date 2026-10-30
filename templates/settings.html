@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>対策設定 - 掲示板</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="nav-inner">
+    <span class="nav-brand">📋 掲示板</span>
+    <a href="{{ url_for('board') }}">掲示板</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('profile') }}">プロフィール</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('admin_panel') }}">管理パネル</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('settings') }}">対策設定</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('reset') }}">リセット</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('login') }}">ログアウト</a>
+  </div>
+</nav>
+
+<div class="page-wrap">
+  <h1 class="page-title">🛡 対策設定</h1>
+  <p class="page-sub">各対策の ON/OFF をリアルタイムで切り替えて、XSS 攻撃・クリックジャッキング攻撃への効果を確認できます。</p>
+
+
+  {% set items = [
+    {
+      "key": "httponly",
+      "title": "HttpOnly Cookie",
+      "desc": "セッション Cookie に HttpOnly 属性を付与します。JavaScript の document.cookie からCookieを読み取れなくなります。",
+      "effect_on": "Cookie 窃取ペイロードが document.cookie を取得しても空文字列が返り、窃取失敗",
+      "effect_off": "document.cookie でセッショントークンが丸見えになり、窃取成功"
+    },
+    {
+      "key": "escape",
+      "title": "出力エスケープ",
+      "desc": "掲示板の投稿内容を HTML エスケープして出力します。&lt;script&gt; は &amp;lt;script&amp;gt; として無害なテキストで表示されます。",
+      "effect_on": "&lt;script&gt; タグがテキストとして表示され、スクリプトは実行されない",
+      "effect_off": "&lt;script&gt; タグがそのまま解釈され、スクリプトが実行される"
+    },
+    {
+      "key": "sanitize",
+      "title": "入力サニタイズ",
+      "desc": "投稿保存時に HTML タグをすべて除去します。悪意あるコードが DB に入る前にブロックします（エスケープと組み合わせると多層防御）。",
+      "effect_on": "保存された投稿から HTML タグが除去され、ペイロードが DB に残らない",
+      "effect_off": "HTML タグを含む生データがそのまま DB に保存される"
+    },
+    {
+      "key": "csp",
+      "title": "CSP (Content-Security-Policy)",
+      "desc": "script-src 'self' を含む CSP ヘッダを付与します。インラインの &lt;script&gt; ブロックや eval() の実行をブラウザレベルでブロックします。",
+      "effect_on": "エスケープ漏れがあっても、ブラウザがインラインスクリプトの実行を拒否",
+      "effect_off": "ポリシーなし。インラインスクリプトが自由に実行される"
+    },
+    {
+      "key": "samesite_strict",
+      "title": "SameSite=Strict Cookie",
+      "desc": "Cookie の SameSite 属性を Strict に設定します。外部サイトからのリクエストには Cookie が送信されなくなり、CSRF 経由での XSS トリガーを抑制します。",
+      "effect_on": "外部サイトからのリクエストで Cookie が送信されず、セッション維持されない",
+      "effect_off": "SameSite=Lax。同サイトナビゲーション以外で Cookie が制限なく送信される"
+    },
+    {
+      "key": "x_frame_options",
+      "title": "X-Frame-Options / nosniff",
+      "desc": "X-Frame-Options: DENY で iframe への埋め込みをブロックします（クリックジャッキング対策）。合わせて X-Content-Type-Options: nosniff も付与します。",
+      "effect_on": "iframe 経由でのページ埋め込みを拒否。クリックジャッキング攻撃が無効化",
+      "effect_off": "任意のサイトに iframe で埋め込み可能。クリックジャッキングのリスクあり"
+    }
+  ] %}
+
+  {% for item in items %}
+  {% set is_on = settings.get(item.key, False) %}
+  <div class="card {{ 'active' if is_on else 'inactive' }}">
+    <div style="display:flex;align-items:flex-start;gap:16px">
+      <!-- トグルスイッチ -->
+      <div style="flex-shrink:0;margin-top:2px">
+        {% if can_edit %}
+        <form method="post" style="margin:0">
+          <input type="hidden" name="key" value="{{ item.key }}">
+          <label class="toggle" title="クリックで ON/OFF 切替">
+            <input type="checkbox" {{ 'checked' if is_on }}>
+            <span class="slider"></span>
+          </label>
+        </form>
+        {% else %}
+        <label class="toggle" title="変更権限がありません" style="opacity:.4;cursor:not-allowed;pointer-events:none">
+          <input type="checkbox" {{ 'checked' if is_on }} disabled>
+          <span class="slider"></span>
+        </label>
+        {% endif %}
+      </div>
+      <!-- 説明 -->
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <strong style="font-size:.95rem">{{ item.title }}</strong>
+          <span class="badge {{ 'on' if is_on else 'off' }}">{{ 'ON' if is_on else 'OFF' }}</span>
+        </div>
+        <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:6px;line-height:1.5">{{ item.desc }}</p>
+        <p style="font-size:.78rem;margin:0">
+          現在の状態:
+          {% if is_on %}
+          <span style="color:var(--success);font-weight:600">✔ {{ item.effect_on }}</span>
+          {% else %}
+          <span style="color:var(--danger);font-weight:600">✘ {{ item.effect_off }}</span>
+          {% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <p class="legend-text">
+    ※ HttpOnly・SameSite はトグル変更時に即座に Cookie が再発行されます（再ログイン不要）。<br>
+    ※ CSP・X-Frame-Options はページリロード直後から反映されます。<br>
+    ※ サニタイズ・エスケープは次の投稿から反映されます。
+  </p>
+</div>
+
+<script src="{{ url_for('static', filename='settings.js') }}"></script>
+</body>
+</html>

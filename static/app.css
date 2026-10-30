@@ -1,0 +1,353 @@
+/* ========================================================
+   XSS / CJ PoC Demo — 共通デザインシステム
+   ======================================================== */
+:root {
+  --nav-bg:         #1e293b;
+  --nav-border:     #0f172a;
+  --nav-link:       #94a3b8;
+  --nav-link-hover: #f1f5f9;
+  --nav-brand:      #f1f5f9;
+
+  --page-bg:  #f1f5f9;
+  --surface:  #ffffff;
+  --border:   #e2e8f0;
+  --radius:   10px;
+  --shadow:   0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.05);
+
+  --text:       #1e293b;
+  --text-muted: #64748b;
+  --text-sub:   #94a3b8;
+
+  --link:       #3b82f6;
+  --link-hover: #2563eb;
+  --primary:    #3b82f6;
+  --primary-hv: #2563eb;
+  --danger:     #ef4444;
+  --danger-hv:  #dc2626;
+  --success:    #22c55e;
+  --warning:    #f59e0b;
+
+  --badge-admin: #dc2626;
+  --badge-staff: #d97706;
+  --badge-user:  #2563eb;
+  --badge-guest: #6b7280;
+
+  /* attacker-theme 用 */
+  --atk-bg:      #0f172a;
+  --atk-surface: #1e293b;
+  --atk-border:  #334155;
+  --atk-text:    #e2e8f0;
+  --atk-muted:   #94a3b8;
+  --atk-accent:  #ef4444;
+  --atk-gold:    #f59e0b;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  background: var(--page-bg);
+  color: var(--text);
+}
+
+/* ===== 共通ナビゲーション ===== */
+.site-nav {
+  background: var(--nav-bg);
+  border-bottom: 1px solid var(--nav-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 46px;
+  overflow: hidden;
+}
+.nav-brand {
+  font-size: .8rem;
+  font-weight: 700;
+  color: var(--nav-brand);
+  white-space: nowrap;
+  margin-right: 10px;
+  letter-spacing: .02em;
+}
+.nav-inner a {
+  color: var(--nav-link);
+  text-decoration: none;
+  font-size: .8rem;
+  padding: 4px 9px;
+  border-radius: 5px;
+  transition: color .15s, background .15s;
+  white-space: nowrap;
+}
+.nav-inner a:hover { color: var(--nav-link-hover); background: rgba(255,255,255,.09); }
+.nav-sep { color: #334155; font-size: .7rem; }
+
+/* ===== ページラッパー ===== */
+.page-wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px 16px 56px;
+}
+.page-wrap.wide { max-width: 1060px; }
+
+h1.page-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+  color: var(--text);
+}
+.page-sub {
+  color: var(--text-muted);
+  font-size: .85rem;
+  margin-bottom: 24px;
+  margin-top: -14px;
+}
+/* ダーク攻撃者ページではテキストを明るくする */
+body.atk h1.page-title {
+  color: var(--atk-text);
+}
+body.atk .page-sub {
+  color: var(--atk-muted);
+}
+
+/* ===== カード ===== */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow);
+}
+.card.danger  { border-color: #fca5a5; background: #fff5f5; }
+.card.success { border-color: #86efac; background: #f0fdf4; }
+.card.warning { border-color: #fcd34d; background: #fffbeb; }
+.card.active  { border-color: #86efac; background: #f0fdf4; }
+.card.inactive{ border-color: var(--border); background: #fafafa; }
+
+.card-title {
+  font-size: .95rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.card p { font-size: .83rem; color: var(--text-muted); line-height: 1.55; margin-bottom: 8px; }
+.card p:last-child { margin-bottom: 0; }
+
+/* ===== バッジ ===== */
+.badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 12px;
+  font-size: .72rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: .03em;
+}
+.badge.admin  { background: var(--badge-admin); }
+.badge.staff  { background: var(--badge-staff); }
+.badge.user   { background: var(--badge-user); }
+.badge.guest  { background: var(--badge-guest); }
+.badge.on     { background: #16a34a; }
+.badge.off    { background: var(--danger); }
+.badge.tag-green  { background: #16a34a; }
+.badge.tag-red    { background: var(--danger); }
+
+/* ===== ボタン ===== */
+.btn {
+  display: inline-block;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 7px;
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .15s, box-shadow .15s, transform .08s;
+  line-height: 1.4;
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hv); }
+.btn-danger  { background: var(--danger);  color: #fff; }
+.btn-danger:hover  { background: var(--danger-hv); }
+.btn-ghost   { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+.btn-ghost:hover   { background: var(--page-bg); color: var(--text); }
+.btn-success { background: #16a34a; color: #fff; }
+.btn-success:hover { background: #15803d; }
+.btn-sm { padding: 5px 12px; font-size: .78rem; }
+
+/* ===== フォーム ===== */
+.form-label {
+  display: block;
+  font-size: .82rem;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+input[type=text], input[type=password], textarea {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: .9rem;
+  background: var(--surface);
+  color: var(--text);
+  transition: border-color .15s;
+  margin-bottom: 14px;
+}
+input[type=text]:focus, input[type=password]:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+
+/* ===== トグルスイッチ ===== */
+.toggle { position: relative; display: inline-block; width: 46px; height: 26px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute; cursor: pointer; inset: 0;
+  background: #cbd5e1; border-radius: 26px; transition: .25s;
+}
+.slider:before {
+  content: ""; position: absolute;
+  height: 20px; width: 20px; left: 3px; bottom: 3px;
+  background: #fff; border-radius: 50%; transition: .25s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+input:checked + .slider { background: #16a34a; }
+input:checked + .slider:before { transform: translateX(20px); }
+
+/* ===== アラート ===== */
+.alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: .85rem;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+.alert-error   { background: #fde8e8; border: 1px solid #fca5a5; color: #b91c1c; }
+.alert-warning { background: #fffbeb; border: 1px solid #fcd34d; color: #92400e; }
+.alert-success { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+.alert-info    { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+
+/* ===== 定義リスト ===== */
+dl.info-grid dt {
+  font-size: .73rem; color: var(--text-muted); margin: 10px 0 2px;
+  font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+}
+dl.info-grid dt:first-child { margin-top: 0; }
+dl.info-grid dd { margin: 0; font-weight: 600; font-size: .95rem; word-break: break-all; }
+
+/* ===== テーブル ===== */
+.data-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.data-table th {
+  background: #f8fafc; padding: 7px 10px; text-align: left;
+  font-size: .7rem; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--text-muted); border-bottom: 2px solid var(--border); white-space: nowrap;
+}
+.data-table td {
+  padding: 8px 10px; border-bottom: 1px solid var(--border);
+  vertical-align: top; word-break: break-all;
+}
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: #f8fafc; }
+
+/* ===== コード ===== */
+code {
+  background: #f1f5f9; padding: 1px 6px; border-radius: 4px;
+  font-size: .83em; color: #334155; font-family: 'SF Mono', monospace;
+}
+
+/* ===== 凡例テキスト ===== */
+.legend-text {
+  font-size: .78rem; color: var(--text-muted);
+  margin-top: 20px; padding-top: 14px;
+  border-top: 1px solid var(--border);
+  line-height: 1.7;
+}
+
+/* ===== Attacker ダーク テーマ ===== */
+body.atk {
+  background: var(--atk-bg);
+  color: var(--atk-text);
+}
+body.atk .site-nav { background: #020817; border-color: #0f172a; }
+body.atk .nav-inner a:hover { background: rgba(255,255,255,.07); }
+
+.atk-card {
+  background: var(--atk-surface);
+  border: 1px solid var(--atk-border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+.atk-card h2 {
+  font-size: .8rem; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--atk-gold);
+  margin-bottom: 14px; font-weight: 700;
+}
+.atk-label {
+  display: block; font-size: .78rem; color: var(--atk-muted);
+  margin-bottom: 4px; font-weight: 500;
+}
+.atk-val { color: var(--atk-accent); font-weight: 700; float: right; }
+
+input[type=range] { width: 100%; cursor: pointer; }
+body.atk input[type=range] { accent-color: #ef4444; }
+body:not(.atk) input[type=range] { accent-color: var(--primary); }
+
+.atk-status {
+  padding: 10px 14px; border-radius: 8px; font-size: .8rem;
+  line-height: 1.55; margin-top: 14px;
+}
+.atk-status.warn { background: #2c1810; border: 1px solid #92400e; color: #fbbf24; }
+.atk-status.ok   { background: #052e16; border: 1px solid #166534; color: #4ade80; }
+.atk-status.info { background: #0c1a2e; border: 1px solid #1e40af; color: #7dd3fc; }
+
+.atk-btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.atk-btn {
+  padding: 6px 14px; border: none; border-radius: 6px;
+  font-size: .78rem; font-weight: 700; cursor: pointer; transition: opacity .15s;
+}
+.atk-btn:hover { opacity: .85; }
+.atk-btn.red    { background: #ef4444; color: #fff; }
+.atk-btn.amber  { background: #f59e0b; color: #000; }
+.atk-btn.green  { background: #22c55e; color: #000; }
+.atk-btn.blue   { background: #3b82f6; color: #fff; }
+
+body.atk code { background: #0f172a; color: #7dd3fc; }
+
+/* ===== ログインページ専用 ===== */
+.login-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+.login-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 32px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.1);
+}
+.login-card h1 { font-size: 1.3rem; margin-bottom: 20px; }
+
+/* ===== アカウント一覧テーブル (ログイン画面) ===== */
+.account-table { width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: 8px; }
+.account-table td { padding: 5px 6px; }
+.account-table td:first-child { width: 70px; }

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>攻撃者ダッシュボード - XSS / CJ Demo</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body class="atk">
+
+<nav class="site-nav">
+  <div class="nav-inner">
+    <span class="nav-brand">⚠ XSS / CJ Demo</span>
+    <a href="{{ url_for('attacker_dashboard') }}">攻撃者ダッシュボード</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('attacker_cj') }}">CJ攻撃Demo</a>
+    <span class="nav-sep">|</span>
+    <a href="{{ url_for('reset') }}">リセット</a>
+  </div>
+</nav>
+
+<div class="page-wrap wide">
+  <h1 class="page-title">💀 攻撃者ダッシュボード（デモ）</h1>
+  <p class="page-sub">掲示板に埋め込まれたペイロードが被害者のブラウザで実行され、送信されてきたデータを表示します。</p>
+
+  <!-- 凡例 -->
+  <div class="atk-card" style="margin-bottom:18px">
+    <h2>凡例</h2>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:.82rem">
+      <span><span class="badge tag-red">Cookie</span> セッション窃取</span>
+      <span><span class="badge" style="background:#2563eb">IP</span> サーバーが接続元を自動記録</span>
+      <span><span class="badge tag-green">GPS</span> Geolocation API（HTTPS必須・ユーザー許可ダイアログあり）</span>
+      <span><span class="badge" style="background:#7c3aed">Deface</span> ページ改ざん</span>
+    </div>
+  </div>
+
+  <!-- データテーブル -->
+  <div class="atk-card" style="overflow-x:auto">
+    <h2>取得データ一覧（{{ loot|length }}件）</h2>
+
+    {% if not loot %}
+    <p style="color:var(--atk-muted);font-size:.85rem">
+      まだデータはありません。掲示板でペイロードを投稿し、別ロールのブラウザでアクセスしてみてください。
+    </p>
+    {% else %}
+    <table class="data-table" style="background:transparent">
+      <thead>
+        <tr>
+          <th style="background:#0f172a;color:var(--atk-muted);border-bottom-color:#334155">取得時刻</th>
+          <th style="background:#0f172a;color:var(--atk-muted);border-bottom-color:#334155"><span class="badge tag-red">Cookie</span></th>
+          <th style="background:#0f172a;color:var(--atk-muted);border-bottom-color:#334155"><span class="badge" style="background:#2563eb">IP</span></th>
+          <th style="background:#0f172a;color:var(--atk-muted);border-bottom-color:#334155"><span class="badge tag-green">GPS 緯度, 経度</span></th>
+          <th style="background:#0f172a;color:var(--atk-muted);border-bottom-color:#334155">精度</th>
+          <th style="background:#0f172a;color:var(--atk-muted);border-bottom-color:#334155">地図</th>
+          <th style="background:#0f172a;color:var(--atk-muted);border-bottom-color:#334155">閲覧URL</th>
+          <th style="background:#0f172a;color:var(--atk-muted);border-bottom-color:#334155">User-Agent</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for l in loot|reverse %}
+        <tr>
+          <td style="border-bottom-color:#334155;color:var(--atk-muted);white-space:nowrap">{{ l.captured_at }}</td>
+          <td style="border-bottom-color:#334155;color:var(--atk-accent);word-break:break-all;max-width:180px">
+            {{ l.cookie or '—' }}
+          </td>
+          <td style="border-bottom-color:#334155;color:#7dd3fc">{{ l.ip }}</td>
+          <td style="border-bottom-color:#334155;color:var(--atk-text)">
+            {% if l.gps_lat and l.gps_lon %}
+              {{ "%.5f"|format(l.gps_lat|float) }},<br>{{ "%.5f"|format(l.gps_lon|float) }}
+            {% else %}
+              <span style="color:var(--atk-muted);font-style:italic">未取得 / 拒否</span>
+            {% endif %}
+          </td>
+          <td style="border-bottom-color:#334155;color:var(--atk-muted)">
+            {% if l.gps_accuracy %}±{{ l.gps_accuracy|int }}m
+            {% else %}<span style="color:var(--atk-muted)">—</span>{% endif %}
+          </td>
+          <td style="border-bottom-color:#334155">
+            {% if l.gps_lat and l.gps_lon %}
+              <a href="https://www.google.com/maps?q={{ l.gps_lat }},{{ l.gps_lon }}"
+                 target="_blank" rel="noopener"
+                 style="color:#3b82f6;text-decoration:none;display:inline-block;margin-bottom:4px">🗺 Google Maps</a><br>
+              <a href="https://www.openstreetmap.org/?mlat={{ l.gps_lat }}&mlon={{ l.gps_lon }}&zoom=16"
+                 target="_blank" rel="noopener"
+                 style="color:#3b82f6;text-decoration:none">🗺 OSM</a>
+            {% else %}
+              <span style="color:var(--atk-muted)">—</span>
+            {% endif %}
+          </td>
+          <td style="border-bottom-color:#334155;color:var(--atk-muted);font-size:.75rem">{{ l.page_url or '—' }}</td>
+          <td style="border-bottom-color:#334155;color:var(--atk-muted);font-size:.72rem;word-break:break-all;max-width:200px">{{ l.user_agent or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+  </div>
+
+  <p class="legend-text" style="border-top-color:#334155;color:var(--atk-muted)">
+    ※ このダッシュボードは「攻撃者が管理するサーバー」を模したエンドポイントです。<br>
+    ※ 実際の攻撃では攻撃者自身のインフラ上に置かれますが、このデモでは利便性のため同一アプリ内に同居させています。<br>
+    ※ <a href="{{ url_for('reset') }}" style="color:var(--atk-accent)">リセット</a> するとデータが全消去されます。
+  </p>
+</div>
+
+</body>
+</html>

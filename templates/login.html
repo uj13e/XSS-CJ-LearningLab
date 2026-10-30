@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ログイン</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+<style>
+  /* クリックコピー対応セル */
+  .copy-cell {
+    cursor: pointer;
+    user-select: none;
+    transition: opacity .15s;
+    position: relative;
+  }
+  .copy-cell:hover { opacity: .65; }
+  .copy-cell:active { opacity: .4; }
+
+  /* コピー完了トースト */
+  .copy-toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    background: #222;
+    color: #fff;
+    font-size: .82rem;
+    padding: 6px 18px;
+    border-radius: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s, transform .2s;
+    white-space: nowrap;
+    z-index: 999;
+  }
+  .copy-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<div class="login-wrap">
+  <div class="login-card">
+    <h1>🔐 ログイン</h1>
+
+    <div class="alert alert-warning">
+      ⚠ 教育・検証目的専用のデモアプリです。公開環境には設置しないでください。
+    </div>
+
+    {% if request.args.get('deleted') %}
+    <div class="alert alert-error">
+      🗑 アカウントが削除されました。セッションは無効化されました。<br>
+      <small style="color:inherit;opacity:.75">リセット後に再ログインできます。</small>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" autocomplete="off">
+      <label class="form-label">ユーザー名</label>
+      <input type="text" id="username-input" name="username" required>
+      <label class="form-label">パスワード</label>
+      <input type="password" id="password-input" name="password" required>
+      <button type="submit" class="btn btn-primary" style="width:100%">ログイン</button>
+    </form>
+
+    <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
+      <hr style="flex:1;border:none;border-top:1px solid var(--border);margin:0">
+      <span style="font-size:.78rem;color:var(--text-muted);white-space:nowrap">または</span>
+      <hr style="flex:1;border:none;border-top:1px solid var(--border);margin:0">
+    </div>
+
+    <!-- ゲストログイン: /guest-login にPOST → ランダムトークン発行 -->
+    <form method="post" action="{{ url_for('guest_login') }}" style="margin-top:10px">
+      <button type="submit" class="btn"
+              style="width:100%;background:transparent;color:var(--text-sub);
+                     border:1.5px solid var(--border);font-weight:600;
+                     display:flex;align-items:center;justify-content:center;gap:6px">
+        🚪 ゲストで入る（ログインせずに使用）
+      </button>
+    </form>
+
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+      <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:8px;font-weight:600">
+        デモアカウント一覧
+        <span style="font-weight:400;font-size:.75rem;color:var(--text-sub)">— 名前・パスワードをクリックでコピー</span>
+      </p>
+      <table class="account-table">
+        <tr>
+          <td><span class="badge admin">admin</span></td>
+          <td class="copy-cell" onclick="copyAndFill('admin', 'username')" title="ユーザー名をコピー"><strong>admin</strong></td>
+          <td class="copy-cell" onclick="copyAndFill('Admin@2024', 'password')" title="パスワードをコピー" style="color:var(--text-muted)">Admin@2024</td>
+        </tr>
+        <tr>
+          <td><span class="badge staff">staff</span></td>
+          <td class="copy-cell" onclick="copyAndFill('staff', 'username')" title="ユーザー名をコピー"><strong>staff</strong></td>
+          <td class="copy-cell" onclick="copyAndFill('Staff@2024', 'password')" title="パスワードをコピー" style="color:var(--text-muted)">Staff@2024</td>
+        </tr>
+        <tr>
+          <td><span class="badge user">user</span></td>
+          <td class="copy-cell" onclick="copyAndFill('user', 'username')" title="ユーザー名をコピー"><strong>user</strong></td>
+          <td class="copy-cell" onclick="copyAndFill('User@2024', 'password')" title="パスワードをコピー" style="color:var(--text-muted)">User@2024</td>
+        </tr>
+        <tr>
+          <td><span class="badge" style="background:#6c757d">guest</span></td>
+          <td colspan="2" style="font-size:.78rem;color:var(--text-sub);padding-left:4px">
+            ボタンからランダム発行
+          </td>
+        </tr>
+      </table>
+      <p style="margin-top:12px;font-size:.78rem;color:var(--text-sub);line-height:1.6">
+        複数ブラウザ（通常＋シークレット）でそれぞれ別アカウントにログインしてください。
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- コピー完了トースト -->
+<div class="copy-toast" id="toast"></div>
+
+<script>
+// クリップボードコピー (execCommand ベース、フォーカスを奪わない)
+function copyText(text) {
+  var tmp = document.createElement('input');
+  tmp.type = 'text';
+  tmp.value = text;
+  tmp.setAttribute('readonly', '');
+  tmp.style.cssText = 'position:absolute;left:-9999px;top:0;opacity:0';
+  document.body.appendChild(tmp);
+  tmp.focus();
+  tmp.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(tmp);
+}
+
+function copyAndFill(text, field) {
+  // フォーム欄に自動入力
+  if (field === 'username') {
+    document.getElementById('username-input').value = text;
+  } else if (field === 'password') {
+    document.getElementById('password-input').value = text;
+  }
+
+  // クリップボードにコピー (Clipboard API → execCommand フォールバック)
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(function() {
+      showToast('「' + text + '」をコピーしました');
+    }).catch(function() {
+      copyText(text);
+      showToast('「' + text + '」をコピーしました');
+    });
+  } else {
+    copyText(text);
+    showToast('「' + text + '」をコピーしました');
+  }
+}
+
+var toastTimer = null;
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { t.classList.remove('show'); }, 1600);
+}
+</script>
+</body>
+</html>
